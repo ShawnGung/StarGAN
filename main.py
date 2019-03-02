@@ -11,6 +11,8 @@ def str2bool(v):
 def main(config):
     # For fast training.
     cudnn.benchmark = True
+    
+    print('num_workers:',config.num_workers)
 
     # Create directories if not exist.
     if not os.path.exists(config.log_dir):
@@ -49,6 +51,9 @@ def main(config):
             solver.test()
         elif config.dataset in ['Both']:
             solver.test_multi()
+    elif config.mode == 'custom_test':
+        if config.dataset in ['CelebA']:
+            solver.test_costom()
 
 
 if __name__ == '__main__':
@@ -87,7 +92,7 @@ if __name__ == '__main__':
 
     # Miscellaneous.
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'test','custom_test'])
     parser.add_argument('--use_tensorboard', type=str2bool, default=True)
 
     # Directories.
@@ -102,7 +107,7 @@ if __name__ == '__main__':
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
     parser.add_argument('--sample_step', type=int, default=1000)
-    parser.add_argument('--model_save_step', type=int, default=10000)
+    parser.add_argument('--model_save_step', type=int, default=5000)
     parser.add_argument('--lr_update_step', type=int, default=1000)
 
     config = parser.parse_args()

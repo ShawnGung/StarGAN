@@ -218,7 +218,8 @@ class Solver(object):
             except:
                 data_iter = iter(data_loader)
                 x_real, label_org = next(data_iter)
-
+                                
+                
             # Generate target domain labels randomly.
             rand_idx = torch.randperm(label_org.size(0))
             label_trg = label_org[rand_idx]
@@ -548,6 +549,56 @@ class Solver(object):
                 result_path = os.path.join(self.result_dir, '{}-images.jpg'.format(i+1))
                 save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
                 print('Saved real and fake images into {}...'.format(result_path))
+                
+                
+                
+    def test_costom(self):
+        """Translate images using StarGAN trained on a single dataset."""
+        # Load the trained generator.
+        from torch.utils import data
+        from torchvision import transforms as T
+        from torchvision.datasets import ImageFolder
+        from PIL import Image
+        import torch
+        import os
+        import random
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+
+        self.restore_model(self.test_iters)
+        
+        transform = []
+        transform.append(T.Resize(230))
+        transform.append(T.CenterCrop((270,200)))
+        transform.append(T.Resize(128))
+        transform.append(T.ToTensor())
+        transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+        transform = T.Compose(transform)
+        dataset = ImageFolder('data/celeba/test_images', transform)
+
+        data_loader = data.DataLoader(dataset=dataset,
+                                      batch_size=1,
+                                      shuffle=False,
+                                      num_workers=1)
+        
+        with torch.no_grad():
+            x_real,_ = next(iter(data_loader))
+            label = torch.tensor([[1,-1,1,1,-1]]).float().to(self.device)
+            # Prepare input images and target domain labels.
+            x_real = x_real.to(self.device)
+            c_trg_list = self.create_labels(label, self.c_dim, self.dataset, self.selected_attrs)
+
+            # Translate images.
+            x_fake_list = [x_real]
+            for c_trg in c_trg_list:
+                x_fake_list.append(self.G(x_real, c_trg))
+            print(x_fake_list[0].shape)
+            # Save the translated images.
+            x_concat = torch.cat(x_fake_list, dim=3)
+            result_path = os.path.join(self.result_dir, 'test-images.jpg')
+            save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
+            print('Saved real and fake images into {}...'.format(result_path))
 
     def test_multi(self):
         """Translate images using StarGAN trained on multiple datasets."""
